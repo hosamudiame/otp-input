@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OTP Input Interaction</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script type="module" src="otp-input.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+  <!-- Theme toggle -->
+  <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+    <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+    <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  </button>
+
+  <!-- Screen 1: Landing -->
+  <div id="screen-landing" class="screen">
+    <button class="trigger" id="trigger" aria-expanded="false" aria-controls="screen-verification">
+      Enter OTP
+    </button>
+  </div>
+
+  <!-- Screen 2: Verification -->
+  <div id="screen-verification" class="screen" hidden>
+    <div class="verification-container">
+      <div class="panel" id="panel">
+        <!-- Header -->
+        <div class="panel-header">
+          <div class="panel-meta">
+            <div class="panel-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="3.75" y="8.25" width="10.5" height="8" rx="2.25" stroke="currentColor" stroke-width="1.35"/>
+                <path d="M6 8.25V6a3 3 0 016 0v2.25" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+                <circle cx="9" cy="12.25" r="1.1" fill="currentColor"/>
+              </svg>
+            </div>
+            <div class="panel-text-group">
+              <span class="panel-title">Enter your code</span>
+              <span class="panel-subtitle">We sent a 6 digit code to your email</span>
+            </div>
+          </div>
+          <button class="panel-close" id="close-btn" aria-label="Close">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M2 2L8 8M8 2L2 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="panel-body">
+          <otp-input length="6" name="verification-code" id="otp"></otp-input>
+        </div>
+      </div>
+
+      <!-- Messages — Floating totally outside the panel -->
+      <div class="messages" id="messages-container">
+        <span class="error-msg" id="error-msg" role="alert" aria-live="assertive" aria-atomic="true"></span>
+        <span class="success-msg" id="success-msg" role="status" aria-live="polite" aria-atomic="true"></span>
+      </div>
+
+      <!-- Resend link -->
+      <div class="resend-container">
+        <p class="resend-text" id="resend-text">Didn't receive a code? <button class="resend-btn" id="resend-btn">Resend</button></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Theme toggle
+    const themeToggle = document.getElementById('theme-toggle');
+    const savedTheme = localStorage.getItem('otp-theme');
+    if (savedTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    themeToggle.addEventListener('click', () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      if (isDark) {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('otp-theme', 'light');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('otp-theme', 'dark');
+      }
+    });
+
+    const screenLanding = document.getElementById('screen-landing');
+    const screenVerification = document.getElementById('screen-verification');
+    const trigger = document.getElementById('trigger');
+    const closeBtn = document.getElementById('close-btn');
+    const otp = document.getElementById('otp');
+    const panel = document.getElementById('panel');
+    const errorMsg = document.getElementById('error-msg');
+    const successMsg = document.getElementById('success-msg');
+    const messagesContainer = document.getElementById('messages-container');
+    const resendBtn = document.getElementById('resend-btn');
+    const resendText = document.getElementById('resend-text');
+
+    let resendTimer = null;
+    let secondsLeft = 0;
+
+    /* rocket sound — noise-based synthesis, no file needed */
+    function playRocketSound() {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = ctx.currentTime;
+      const duration = 1.4;
+
+      // Shared noise buffer — base material for all layers
+      const bufferSize = ctx.sampleRate * duration;
+      const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+      // Layer 1: deep engine rumble — low-pass that opens up on launch
+      const rumble = ctx.createBufferSource();
+      rumble.buffer = noiseBuffer;
+      const rumbleFilter = ctx.createBiquadFilter();
+      rumbleFilter.type = 'lowpass';
+      rumbleFilter.frequency.setValueAtTime(80, now);
+      rumbleFilter.frequency.exponentialRampToValueAtTime(350, now + 0.6);
+      const rumbleGain = ctx.createGain();
+      rumbleGain.gain.setValueAtTime(0, now);
+      rumbleGain.gain.linearRampToValueAtTime(0.55, now + 0.08);
+      rumbleGain.gain.exponentialRampToValueAtTime(0.001, now + 1.1);
+      rumble.connect(rumbleFilter);
+      rumbleFilter.connect(rumbleGain);
+      rumbleGain.connect(ctx.destination);
+      rumble.start(now);
+      rumble.stop(now + 1.1);
+
+      // Layer 2: mid whoosh — bandpass sweeping upward as rocket rises
+      const whoosh = ctx.createBufferSource();
+      whoosh.buffer = noiseBuffer;
+      const whooshFilter = ctx.createBiquadFilter();
+      whooshFilter.type = 'bandpass';
+      whooshFilter.frequency.setValueAtTime(250, now);
+      whooshFilter.frequency.exponentialRampToValueAtTime(4000, now + 0.9);
+      whooshFilter.Q.value = 1.2;
+      const whooshGain = ctx.createGain();
+      whooshGain.gain.setValueAtTime(0, now);
+      whooshGain.gain.linearRampToValueAtTime(0.3, now + 0.06);
+      whooshGain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+      whoosh.connect(whooshFilter);
+      whooshFilter.connect(whooshGain);
+      whooshGain.connect(ctx.destination);
+      whoosh.start(now);
+      whoosh.stop(now + 0.9);
+
+      // Layer 3: high crackle — fire/exhaust texture
+      const crackle = ctx.createBufferSource();
+      crackle.buffer = noiseBuffer;
+      const crackleFilter = ctx.createBiquadFilter();
+      crackleFilter.type = 'highpass';
+      crackleFilter.frequency.setValueAtTime(2000, now);
+      const crackleGain = ctx.createGain();
+      crackleGain.gain.setValueAtTime(0, now);
+      crackleGain.gain.linearRampToValueAtTime(0.06, now + 0.04);
+      crackleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      crackle.connect(crackleFilter);
+      crackleFilter.connect(crackleGain);
+      crackleGain.connect(ctx.destination);
+      crackle.start(now);
+      crackle.stop(now + 0.5);
+    }
+
+    function startResendTimer() {
+      secondsLeft = 30;
+      resendBtn.disabled = true;
+      updateResendText();
+      
+      resendTimer = setInterval(() => {
+        secondsLeft--;
+        updateResendText();
+        if (secondsLeft <= 0) {
+          clearInterval(resendTimer);
+          resendBtn.disabled = false;
+          resendText.innerHTML = `Didn't receive a code? <button class="resend-btn" id="resend-btn">Resend</button>`;
+          // Re-bind event listener because we replaced the HTML
+          document.getElementById('resend-btn').addEventListener('click', onResend);
+        }
+      }, 1000);
+    }
+
+    function updateResendText() {
+      resendText.innerHTML = `Resend available in <span class="timer-count">${secondsLeft}s</span>`;
+    }
+
+    function onResend() {
+      startResendTimer();
+      // Simulated resend feedback
+      console.log('Code resent!');
+    }
+
+    resendBtn.addEventListener('click', onResend);
+
+    function hideMessages() {
+      messagesContainer.classList.remove('has-content');
+      errorMsg.classList.remove('show');
+      errorMsg.textContent = '';
+      successMsg.classList.remove('show');
+      successMsg.textContent = '';
+    }
+
+    function openVerification() {
+      trigger.classList.add('is-out');
+      
+      trigger.addEventListener('animationend', () => {
+        screenLanding.hidden = true;
+        trigger.classList.remove('is-out');
+        trigger.setAttribute('aria-expanded', 'true');
+
+        screenVerification.hidden = false;
+        
+        panel.classList.add('is-in');
+        panel.addEventListener('animationend', () => {
+          panel.classList.remove('is-in');
+          otp.focus();
+        }, { once: true });
+      }, { once: true });
+    }
+
+    function closeVerification() {
+      panel.classList.add('is-out');
+      
+      panel.addEventListener('animationend', () => {
+        screenVerification.hidden = true;
+        panel.classList.remove('is-out');
+        trigger.setAttribute('aria-expanded', 'false');
+
+        screenLanding.hidden = false;
+        
+        trigger.classList.add('is-in');
+        trigger.addEventListener('animationend', () => {
+          trigger.classList.remove('is-in');
+        }, { once: true });
+
+        otp.clear();
+        hideMessages();
+      }, { once: true });
+    }
+
+    trigger.addEventListener('click', openVerification);
+    closeBtn.addEventListener('click', closeVerification);
+
+    otp.addEventListener('complete', (e) => {
+      const code = e.detail.value;
+      
+      // 1. Verifying State (Simulated Latency)
+      otp.classList.add('verifying');
+      hideMessages();
+
+      setTimeout(() => {
+        otp.classList.remove('verifying');
+        
+        if (code === '111111') {
+          // Success
+          otp.classList.add('success');
+          successMsg.textContent = '✓ Verification successful';
+          successMsg.classList.add('show');
+          messagesContainer.classList.add('has-content');
+
+          // Trigger continuous confetti for 1 second
+          const duration = 1000;
+          const end = Date.now() + duration;
+
+          (function frame() {
+            confetti({
+              particleCount: 2,
+              angle: 270,
+              spread: 160,
+              origin: { x: Math.random(), y: -0.1 },
+              colors: ['#10b981', '#059669']
+            });
+
+            if (Date.now() < end) {
+              requestAnimationFrame(frame);
+            }
+          }());
+          // Close verification screen after confetti and delay
+          setTimeout(() => {
+            closeVerification();
+            playRocketSound();
+            trigger.innerHTML = '<span class="rocket-icon">🚀</span>Verified Successfully';
+            trigger.classList.add('is-verified');
+            trigger.disabled = true;
+          }, 1200);
+        } else {
+          // Error
+          otp.setError();
+          setTimeout(() => {
+            otp.clear();
+          }, 500);
+          
+          setTimeout(() => {
+            errorMsg.textContent = 'Invalid code. Please try again.';
+            errorMsg.classList.add('show');
+            messagesContainer.classList.add('has-content');
+          }, 10);
+        }
+      }, 500); // 0.5s simulated latency
+    });
+
+    otp.addEventListener('input', () => {
+      if (otp.getValue().length < 6) {
+        hideMessages();
+      }
+    });
+  </script>
+
+</body>
+</html>
