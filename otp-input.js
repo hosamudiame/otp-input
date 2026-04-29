@@ -22,6 +22,22 @@ const SHADOW_CSS = `
     align-items: center;
   }
 
+  /* Mobile Responsive Inputs */
+  @media (max-width: 480px) {
+    .inputs {
+      gap: 8px;
+    }
+    .box-wrapper {
+      width: 45px;
+      height: 56px;
+      border-radius: 10px;
+    }
+    .box, .box-placeholder {
+      font-size: 22px;
+      line-height: 56px;
+    }
+  }
+
   /* ── Box Wrapper ─────────────────────────────────────── */
   .box-wrapper {
     position: relative;

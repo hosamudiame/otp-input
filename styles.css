@@ -151,9 +151,45 @@ body {
   border-radius: 20px;
   padding: 12px 4px 4px;
   width: 480px;
+  max-width: 95vw;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* ── Mobile Responsive Adjustments ───────────────────── */
+@media (max-width: 500px) {
+  .panel {
+    width: 100%;
+    max-width: 100vw;
+    border-radius: 24px 24px 0 0;
+    position: fixed;
+    bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+    gap: 8px;
+  }
+  
+  .panel.is-in {
+    animation: panelSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  
+  .panel.is-out {
+    animation: panelSlideDown 0.3s cubic-bezier(0.7, 0, 0.84, 0) both;
+  }
+
+  .panel-body {
+    padding: 20px 12px;
+  }
+}
+
+@keyframes panelSlideUp {
+  from { transform: translateY(100%); opacity: 1; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes panelSlideDown {
+  from { transform: translateY(0); opacity: 1; }
+  to   { transform: translateY(100%); opacity: 1; }
 }
 
 /* ── Panel header ──────────────────────────────────────── */
