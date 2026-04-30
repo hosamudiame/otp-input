@@ -466,12 +466,13 @@ body {
 /* ── Final Mobile Overrides ─────────────────────────── */
 @media (max-width: 500px) {
   .screen {
-    --screen-padding: 16px;
+    --screen-padding: 20px;
   }
 
   .verification-container {
     width: 100%;
     max-width: 360px;
+    zoom: 0.9;
   }
 
   .panel {
@@ -507,11 +508,12 @@ body {
 
 @media (max-width: 380px) {
   .screen {
-    --screen-padding: 12px;
+    --screen-padding: 16px;
   }
 
   .verification-container {
     max-width: 332px;
+    zoom: 0.82;
   }
 
   .theme-toggle {
@@ -562,11 +564,12 @@ body {
 
 @media (max-width: 340px) {
   .screen {
-    --screen-padding: 8px;
+    --screen-padding: 12px;
   }
 
   .verification-container {
     max-width: 296px;
+    zoom: 0.76;
   }
 
   .trigger {
