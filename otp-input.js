@@ -5,6 +5,8 @@
 const SHADOW_CSS = `
   :host {
     display: block;
+    width: 100%;
+    max-width: 100%;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
@@ -14,27 +16,64 @@ const SHADOW_CSS = `
     flex-direction: column;
     align-items: center;
     gap: 8px;
+    width: 100%;
   }
 
   .inputs {
+    --otp-gap: 12px;
+    --otp-box-size: 60px;
     display: flex;
-    gap: 12px;
+    gap: var(--otp-gap);
     align-items: center;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: nowrap;
   }
 
   /* Mobile Responsive Inputs */
-  @media (max-width: 480px) {
+  @media (max-width: 560px) {
     .inputs {
-      gap: 8px;
+      --otp-gap: clamp(6px, 2vw, 10px);
+      --otp-box-size: clamp(34px, calc((100% - (5 * var(--otp-gap))) / 6), 56px);
     }
+
     .box-wrapper {
-      width: 45px;
-      height: 56px;
+      width: var(--otp-box-size);
+      height: clamp(52px, calc(var(--otp-box-size) * 1.2), 68px);
+      border-radius: 12px;
+    }
+
+    .box-bg {
+      border-radius: 12px;
+    }
+
+    .box,
+    .box-placeholder {
+      font-size: clamp(22px, 4vw, 28px);
+      line-height: clamp(52px, calc(var(--otp-box-size) * 1.2), 68px);
+    }
+  }
+
+  @media (max-width: 380px) {
+    .inputs {
+      --otp-gap: clamp(4px, 1.6vw, 6px);
+      --otp-box-size: clamp(30px, calc((100% - (5 * var(--otp-gap))) / 6), 44px);
+    }
+
+    .box-wrapper {
+      width: var(--otp-box-size);
+      height: clamp(48px, calc(var(--otp-box-size) * 1.25), 56px);
       border-radius: 10px;
     }
-    .box, .box-placeholder {
-      font-size: 22px;
-      line-height: 56px;
+
+    .box-bg {
+      border-radius: 10px;
+    }
+
+    .box,
+    .box-placeholder {
+      font-size: clamp(17px, 5vw, 20px);
+      line-height: clamp(48px, calc(var(--otp-box-size) * 1.25), 56px);
     }
   }
 
@@ -180,7 +219,6 @@ class OtpInput extends HTMLElement {
 
   _build() {
     this._length = Math.max(1, parseInt(this.getAttribute('length')) || 6);
-    const base = this.getAttribute('name') || 'otp';
 
     const boxHTML = Array.from({ length: this._length }, (_, i) => `
       <div class="box-wrapper" style="--i:${i}">
@@ -197,6 +235,10 @@ class OtpInput extends HTMLElement {
 
   _wire() {
     this._inputs.forEach((el, idx) => {
+      el.setAttribute('aria-label', `Verification code digit ${idx + 1} of ${this._length}`);
+      el.setAttribute('autocomplete', idx === 0 ? 'one-time-code' : 'off');
+      el.setAttribute('name', `${this.getAttribute('name') || 'otp'}-${idx + 1}`);
+      el.spellcheck = false;
       el.addEventListener('keydown', (e) => this._onKeydown(e, idx));
       el.addEventListener('input', (e) => this._onInput(e, idx));
       el.addEventListener('focus', () => el.select());
@@ -241,6 +283,10 @@ class OtpInput extends HTMLElement {
   }
 
   getValue() { return this._inputs.map(el => el.value).join(''); }
+
+  focus() {
+    this._inputs[0]?.focus();
+  }
 
   clear() {
     this._inputs.forEach(el => { el.value = ''; el.classList.remove('filled'); });
