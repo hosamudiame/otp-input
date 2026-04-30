@@ -11,16 +11,16 @@ A polished, animated OTP (one-time password) input built as a native [Web Compon
 - Native `<otp-input>` custom element — works in any framework or none
 - Configurable digit length via `length` attribute
 - Auto-advance focus on each digit entry
-- Full keyboard navigation — ArrowLeft, ArrowRight, Backspace
-- Paste support — paste `123456` to fill all digits at once
+- Backspace navigates to the previous field
 - Non-numeric input silently ignored
-- Staggered wave animation when all digits are entered
-- Shake + red-highlight animation for errors
-- Success glow state with accessible live region announcement
+- Verifying state with staggered pulse animation (simulated latency)
+- Shake + red-highlight animation on error with haptic feedback on mobile
+- Staggered success glow with confetti burst and rocket sound on verification
+- Resend code button with 30-second cooldown timer
+- Light / dark mode with system preference + manual toggle
+- Mobile responsive — scales down gracefully on small screens
 - `disabled` attribute to lock the entire input
-- Declarative `error` attribute for server-side validation flows
-- Accessible: `inputmode="numeric"`, `autocomplete="one-time-code"`, `aria-label` per digit, ARIA live regions
-- Custom `complete` event with `detail.value`
+- Accessible: `inputmode="numeric"`, `autocomplete="one-time-code"`, `aria-label` per digit, ARIA live regions for error and success messages
 
 ---
 
@@ -59,10 +59,9 @@ Event detail shape:
 | Method | Signature | Description |
 |---|---|---|
 | `getValue` | `() → string` | Returns the current OTP string |
-| `setValue` | `(code: string) → void` | Programmatically fills digits |
 | `clear` | `() → void` | Clears all inputs and resets state |
-| `focus` | `() → void` | Focuses the first empty input |
-| `setError` | `(message: string) → void` | Triggers shake + error state |
+| `focus` | `() → void` | Focuses the first input |
+| `setError` | `() → void` | Triggers shake + error highlight state |
 | `clearError` | `() → void` | Clears error state |
 
 ---
@@ -74,7 +73,6 @@ Event detail shape:
 | `length` | `number` | `6` | Number of digit boxes |
 | `name` | `string` | `otp` | Base name for input fields |
 | `disabled` | `boolean` | — | Disables all inputs |
-| `error` | `string` | — | Sets error state declaratively |
 
 ---
 
@@ -83,6 +81,15 @@ Event detail shape:
 | Event | Detail | Fires when |
 |---|---|---|
 | `complete` | `{ value: string }` | All digit boxes are filled |
+
+---
+
+## Demo Codes
+
+| Code | Result |
+|---|---|
+| `111111` | Success — confetti + rocket sound |
+| anything else | Error — shake + "Invalid code" message |
 
 ---
 
@@ -109,10 +116,10 @@ Then visit `http://localhost:3000`.
 
 > Built a fully-animated OTP input as a zero-dependency Web Component 🔐
 >
-> ✅ Paste entire code instantly
-> ✅ Keyboard navigation built-in
-> ✅ Staggered wave on success
-> ✅ Shake animation on error
+> ✅ Verifying state with pulse animation
+> ✅ Shake + haptic feedback on error
+> ✅ Confetti + rocket sound on success
+> ✅ Dark mode built-in
 > ✅ Works in React, Vue, or plain HTML
 >
 > Just drop in `<otp-input length="6">` — no npm, no build step.
